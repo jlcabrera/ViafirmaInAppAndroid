@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="firmaPDF">
+        <item>PDF_PKCS7"</item>
+        <item>PDF_PKCS7_T"</item>
+        <item>PAdES_LTV"</item>
+        <item>PAdES_EPES"</item>
+        <item>PAdES_BES"</item>
+        <item>PAdES_BASIC"</item>
+    </string-array>
+    <string-array name="clasesFirma">
+        <item>CAdES"</item>
+        <item>XAdES"</item>
+        <item>PAdES"</item>
+    </string-array>
+</resources>
