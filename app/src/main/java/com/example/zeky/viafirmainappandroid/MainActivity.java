@@ -10,6 +10,7 @@ import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.Spinner;
@@ -19,7 +20,7 @@ import org.apache.commons.io.IOUtils;
 import org.viafirma.client.sign.TypeFile;
 import org.viafirma.client.sign.TypeFormatSign;
 
-import java.lang.reflect.Array;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -31,7 +32,7 @@ import viafirma.mobile.api.model.CertificateEntity;
 import viafirma.mobile.vo.DocumentVO;
 
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity  {
 
     private final Context CONTEXTO = this;
     private String url;
@@ -100,11 +101,15 @@ public class MainActivity extends Activity {
         }
     }
 
-
-
     public void firmar(View view){
 
-        seleccionFirma();
+        this.url = ((EditText) findViewById(R.id.url)).getText().toString();
+        this.key = ((EditText) findViewById(R.id.appKey)).getText().toString();
+        this.pass = ((EditText) findViewById(R.id.passKey)).getText().toString();
+
+        String tipoDeFirma = "";
+
+        tipoDeFirma = seleccionFirma();
 
         List<DocumentVO> listaDocumentos = new ArrayList<>();
         byte[] dataToSign ;
@@ -114,17 +119,13 @@ public class MainActivity extends Activity {
           dataToSign =  IOUtils.toByteArray(getResources().openRawResource(R.raw.viafirmasdkinappandroiddoc));
 
           DocumentVO documento = new DocumentVO("test", dataToSign, TypeFile.PDF);
-          documento.setTypeFormatSign(TypeFormatSign.PDF_PKCS7_T);
+          documento.setTypeFormatSign(getTypeFormat(tipoDeFirma));
           listaDocumentos.add(documento);
 
        } catch (Exception e) {
            e.printStackTrace();
            Toast.makeText(CONTEXTO,"Han ocurrido errores", Toast.LENGTH_LONG).show();
        }
-
-        String url = "http://testservices.viafirma.com/viafirma";
-        String key = "jcabrera";
-        String pass = "0L37W37D4ASHMT1RW26YHGNWEMQYN";
 
         ViafirmaAndroidLib api = ViafirmaAndroidLib.initWithOptions(this, null, url, key, pass);
 
@@ -144,7 +145,8 @@ public class MainActivity extends Activity {
                         public void run() {
                             AlertDialog dialog = new AlertDialog.Builder(CONTEXTO).setTitle("SE HA FIRMADO UN DOCUMENTO")
                                     .setMessage("Id de firma: " + idFirma)
-                                    .setNeutralButton("Aceptal", null).create();
+                                    .setPositiveButton("Aceptar", null)
+                                    .create();
                             dialog.show();
                             Toast.makeText(CONTEXTO, "firma realizada con exito", Toast.LENGTH_LONG).show();
                         }
@@ -167,22 +169,56 @@ public class MainActivity extends Activity {
         }
     }
 
-    public void seleccionFirma(){
+    //-----------------------------------------------------
+
+    public String seleccionFirma(){
+
         LayoutInflater inflater = LayoutInflater.from(CONTEXTO);
         final View view = inflater.inflate(R.layout.selector, null);
 
         Spinner claseFirma = (Spinner) view.findViewById(R.id.sClaseFirma);
-        Spinner tipoFirma = (Spinner) view.findViewById(R.id.sTipoFirma);
+        final Spinner tipoFirma = (Spinner) view.findViewById(R.id.sTipoFirma);
 
-        ArrayAdapter<CharSequence> adapterClaseFirma = ArrayAdapter.createFromResource(CONTEXTO,R.array.clasesFirma, android.R.layout.simple_dropdown_item_1line);
+        final ArrayAdapter<CharSequence> adapterClaseFirma = ArrayAdapter.createFromResource(CONTEXTO,R.array.clasesFirma, android.R.layout.simple_dropdown_item_1line);
         adapterClaseFirma.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-
         claseFirma.setAdapter(adapterClaseFirma);
 
-        ArrayAdapter<CharSequence> adapterTipoFirma = ArrayAdapter.createFromResource(CONTEXTO,R.array.firmaPDF,android.R.layout.simple_dropdown_item_1line);
-        adapterTipoFirma.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        final String tipoDeFirma = "";
+        claseFirma.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String clase = (String)parent.getSelectedItem();
+                ArrayAdapter<CharSequence> adapterTipoFirma = null;
+                if (clase.equalsIgnoreCase("PAdES")) {
+                    adapterTipoFirma = ArrayAdapter.createFromResource(CONTEXTO, R.array.firmaPDF, android.R.layout.simple_dropdown_item_1line);
+                } else if (clase.equalsIgnoreCase("XAdES")) {
+                    adapterTipoFirma = ArrayAdapter.createFromResource(CONTEXTO, R.array.firmaXML, android.R.layout.simple_dropdown_item_1line);
+                } else {
+                    adapterTipoFirma = ArrayAdapter.createFromResource(CONTEXTO, R.array.firmaCADES, android.R.layout.simple_dropdown_item_1line);
+                }
 
-        tipoFirma.setAdapter(adapterTipoFirma);
+                adapterTipoFirma.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                tipoFirma.setAdapter(adapterTipoFirma);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+
+        tipoFirma.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String tipoDeFirma = (String) parent.getSelectedItem();
+                Toast.makeText(CONTEXTO, tipoDeFirma, Toast.LENGTH_LONG).show();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
 
         AlertDialog dialogo = new AlertDialog.Builder(CONTEXTO)
                 .setView(view)
@@ -196,5 +232,76 @@ public class MainActivity extends Activity {
                 .setNegativeButton("Cancelar", null)
                 .create();
         dialogo.show();
+
+        return tipoDeFirma;
     }
+
+    //----------------------------------------
+
+    public TypeFormatSign getTypeFormat(String tipoDeFirma){
+
+        TypeFormatSign type = null;
+        switch(tipoDeFirma){
+
+            case "XDES_EPES_ENVELOPED":
+                type =  TypeFormatSign.XADES_EPES_ENVELOPED;
+                break;
+            case "CMS":
+                type =  TypeFormatSign.CMS;
+                break;
+            case "PDF_PKCS7":
+                type =  TypeFormatSign.PDF_PKCS7;
+                break;
+            case "XADES_T_ENVELOPED":
+                type =  TypeFormatSign.XADES_T_ENVELOPED;
+                break;
+            case "XADES_XL_ENVELOPED":
+                type =  TypeFormatSign.XADES_XL_ENVELOPED;
+                break;
+            case "XADES_A_ENVELOPED":
+                type =  TypeFormatSign.XADES_A_ENVELOPED;
+                break;
+            case "CMS_DETACHED":
+                type =  TypeFormatSign.CMS_DETACHED;
+                break;
+            case "CMS_ATTACHED":
+                type =  TypeFormatSign.CMS_ATTACHED;
+                break;
+            case "CAdES_BES":
+               type =   TypeFormatSign.CAdES_BES;
+                break;
+            case "CAdES_EPES":
+                type =  TypeFormatSign.CAdES_EPES;
+                break;
+            case "CAdES_T":
+                type =  TypeFormatSign.CAdES_T;
+                break;
+            case "CAdES_C":
+                type =  TypeFormatSign.CAdES_C;
+                break;
+            case "CAdES_XL":
+                type =  TypeFormatSign.CAdES_XL;
+                break;
+            case "CAdES_A":
+                type =  TypeFormatSign.CAdES_A;
+                break;
+            case "PAdES_BASIC":
+                type =  TypeFormatSign.PAdES_BASIC;
+                break;
+            case "PAdES_BES":
+                type =  TypeFormatSign.PAdES_BES;
+                break;
+            case "PAdES_EPES":
+                type =  TypeFormatSign.PAdES_EPES;
+                break;
+            case "PAdES_LTV":
+                type =  TypeFormatSign.PAdES_LTV;
+                break;
+            case "PDF_PKCS7_T":
+                type =  TypeFormatSign.PDF_PKCS7_T;
+                break;
+        }
+        return type;
+    }
+
 }
