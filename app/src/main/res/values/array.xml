@@ -13,4 +13,22 @@
         <item>XAdES"</item>
         <item>PAdES"</item>
     </string-array>
+    <string-array name="firmaXML">
+        <item>XADES_EPES_ENVELOPED</item>
+        <item>XADES_T_ENVELOPED</item>
+        <item>XADES_XL_ENVELOPED</item>
+        <item>XADES_A_ENVELOPED</item>
+    </string-array>
+    <string-array name="firmaCADES">
+        <item>CMS</item>
+        <item>CMS_DETACHED</item>
+        <item>CMS_ATTACHED</item>
+        <item>CAdES_BES</item>
+        <item>CAdES_EPES</item>
+        <item>CAdES_T</item>
+        <item>CAdES_C</item>
+        <item>CAdES_XL</item>
+        <item>CAdES_A</item>
+    </string-array>
+
 </resources>
