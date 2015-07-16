@@ -2,25 +2,23 @@ package com.example.zeky.viafirmainappandroid;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.FragmentManager;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.EditText;
-import android.widget.Spinner;
 import android.widget.Toast;
 
 import org.apache.commons.io.IOUtils;
 import org.viafirma.client.sign.TypeFile;
 import org.viafirma.client.sign.TypeFormatSign;
 
-import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -32,7 +30,7 @@ import viafirma.mobile.api.model.CertificateEntity;
 import viafirma.mobile.vo.DocumentVO;
 
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements Selector.SelectorListener{
 
     private final Context CONTEXTO = this;
     private String url;
@@ -45,14 +43,7 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
 
     }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
-
+    
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle action bar item clicks here. The action bar will
@@ -80,26 +71,35 @@ public class MainActivity extends Activity {
             api.login(certificado, "julio", new ViafirmaAPILoginCallBack() {
                 @Override
                 public void loginOk(CertificateEntity entity) {
-                    Toast.makeText(CONTEXTO, "Autenticación correcta: " + entity.getCertificateFullName() + " - " + entity.getCertificateNationalId(), Toast.LENGTH_LONG).show();
+                    AlertDialog dialogo = new AlertDialog.Builder(CONTEXTO).setTitle("Autentición correcta")
+                            .setMessage(entity.getCertificateFullName() + " - " + entity.getCertificateNationalId()).create();
+                    dialogo.show();
                 }
 
                 @Override
                 public void fail(String message) {
                     if (message.equalsIgnoreCase(ViafirmaAndroidLib.ERROR_CA_NOT_SUPPORTED)) {
+                        Toast.makeText(CONTEXTO,"CA no soportada",Toast.LENGTH_LONG).show();
                         Log.e("Viafirma", "CA no soportada");
                     } else if (message.equalsIgnoreCase(ViafirmaAndroidLib.ERROR_EXPIRED_CERTIFICATE)) {
+                        Toast.makeText(CONTEXTO,"Certificado Expirado",Toast.LENGTH_LONG).show();
                         Log.e("Viafirma", "Certificado Expirado");
                     } else if (message.equalsIgnoreCase(ViafirmaAndroidLib.ERROR_VIAFIRMA_CONNECTION)) {
+                        Toast.makeText(CONTEXTO,"Error en la conexión",Toast.LENGTH_LONG).show();
                         Log.e("Viafirma", "Error en la conexión");
                     } else if (message.equalsIgnoreCase(ViafirmaAndroidLib.ERROR_WITH_CERTIFICATE)) {
+                        Toast.makeText(CONTEXTO,"Error al leer el certificado",Toast.LENGTH_LONG).show();
                         Log.e("Viafirma", "Error al leer el certificado");
                     } else {
+                        Toast.makeText(CONTEXTO,"La contraseña no es correcta",Toast.LENGTH_LONG).show();
                         Log.e("Viafirma", "La contraseña no es correcta");
                     }
                 }
             });
         }
     }
+
+    //----------------------------------------
 
     public void firmar(String tipoDeFirma) {
 
@@ -115,7 +115,7 @@ public class MainActivity extends Activity {
 
             dataToSign = IOUtils.toByteArray(getResources().openRawResource(R.raw.viafirmasdkinappandroiddoc));
 
-            DocumentVO documento = new DocumentVO("test", dataToSign, TypeFile.PDF);
+            DocumentVO documento = new DocumentVO("DocumentSigned", dataToSign, TypeFile.PDF);
             documento.setTypeFormatSign(TypeFormatSign.valueOf(tipoDeFirma));
             listaDocumentos.add(documento);
 
@@ -133,19 +133,24 @@ public class MainActivity extends Activity {
 
             api.sign(listaDocumentos, certificado, "12345", policyParams, new ViafirmaAPILoginCallBack() {
                 @Override
-                public void signOk(CertificateEntity cert, String idSign) {
+                public void signOk(CertificateEntity cert, final String idSign) {
                     final String idFirma = idSign;
-                    Log.i("Viafirma", "Se ha rºelizado la firma con el siguiente id: " + idSign);
+                    Log.i("Viafirma", "Se ha realizado la firma con el siguiente id: " + idSign);
 
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
                             AlertDialog dialog = new AlertDialog.Builder(CONTEXTO).setTitle("SE HA FIRMADO UN DOCUMENTO")
                                     .setMessage("Id de firma: " + idFirma)
-                                    .setPositiveButton("Aceptar", null)
+                                    .setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(url + "/v/" + idSign + "?d"));
+                                            startActivity(i);
+                                        }
+                                    })
                                     .create();
                             dialog.show();
-                            Toast.makeText(CONTEXTO, "firma realizada con exito", Toast.LENGTH_LONG).show();
                         }
                     });
                 }
@@ -169,67 +174,15 @@ public class MainActivity extends Activity {
     //-----------------------------------------------------
 
     public void seleccionarTipoFirma(View vista) {
-
-        LayoutInflater inflater = LayoutInflater.from(CONTEXTO);
-        final View view = inflater.inflate(R.layout.selector, null);
-
-        final Spinner claseFirma = (Spinner) view.findViewById(R.id.sClaseFirma);
-        final Spinner tipoFirma = (Spinner) view.findViewById(R.id.sTipoFirma);
-
-        final ArrayAdapter<CharSequence> adapterClaseFirma = ArrayAdapter.createFromResource(CONTEXTO, R.array.clasesFirma, android.R.layout.simple_dropdown_item_1line);
-        adapterClaseFirma.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        claseFirma.setAdapter(adapterClaseFirma);
-
-        claseFirma.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                String clase = (String) parent.getSelectedItem();
-                ArrayAdapter<CharSequence> adapterTipoFirma = null;
-
-                if (clase.equalsIgnoreCase("PAdES")) {
-
-                    adapterTipoFirma = ArrayAdapter.createFromResource(CONTEXTO, R.array.firmaPDF, android.R.layout.simple_dropdown_item_1line);
-                } else if (clase.equalsIgnoreCase("XAdES")) {
-                    adapterTipoFirma = ArrayAdapter.createFromResource(CONTEXTO, R.array.firmaXML, android.R.layout.simple_dropdown_item_1line);
-                } else {
-                    adapterTipoFirma = ArrayAdapter.createFromResource(CONTEXTO, R.array.firmaCADES, android.R.layout.simple_dropdown_item_1line);
-                }
-
-                adapterTipoFirma.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-
-                tipoFirma.setAdapter(adapterTipoFirma);
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
-        });
-
-        tipoFirma.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                Toast.makeText(CONTEXTO, (String) tipoFirma.getSelectedItem(), Toast.LENGTH_LONG).show();
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
-        });
-
-        AlertDialog dialogo = new AlertDialog.Builder(CONTEXTO)
-                .setView(view)
-                .setTitle("Seleccione firma")
-                .setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        firmar((String) tipoFirma.getSelectedItem());
-                    }
-                })
-                .setNegativeButton("Cancelar", null)
-                .create();
-        dialogo.show();
+        FragmentManager fm = getFragmentManager();
+        Selector selector = new Selector();
+        selector.show(fm,"test");
     }
 
+    //--------------------------------
+
+    @Override
+    public void onFinishEditDialog(String typeFromat) {
+        firmar(typeFromat);
+    }
 }
