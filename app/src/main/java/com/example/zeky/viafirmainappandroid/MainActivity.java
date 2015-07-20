@@ -3,6 +3,7 @@ package com.example.zeky.viafirmainappandroid;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.FragmentManager;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -13,6 +14,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import org.apache.commons.io.IOUtils;
@@ -36,6 +38,7 @@ public class MainActivity extends Activity implements Selector.SelectorListener{
     private String url;
     private String key;
     private String pass;
+    private ProgressDialog progressBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,7 +46,7 @@ public class MainActivity extends Activity implements Selector.SelectorListener{
         setContentView(R.layout.activity_main);
 
     }
-    
+
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle action bar item clicks here. The action bar will
@@ -66,6 +69,7 @@ public class MainActivity extends Activity implements Selector.SelectorListener{
 
         ViafirmaAndroidLib api = ViafirmaAndroidLib.initWithOptions(this, null, url, key, pass);
 
+
         if (api.isKeyChainSupported()) {
             CertificateEntity certificado = api.getCertificateKeyChainRef();
             api.login(certificado, "julio", new ViafirmaAPILoginCallBack() {
@@ -79,19 +83,19 @@ public class MainActivity extends Activity implements Selector.SelectorListener{
                 @Override
                 public void fail(String message) {
                     if (message.equalsIgnoreCase(ViafirmaAndroidLib.ERROR_CA_NOT_SUPPORTED)) {
-                        Toast.makeText(CONTEXTO,"CA no soportada",Toast.LENGTH_LONG).show();
+                        Toast.makeText(CONTEXTO, "CA no soportada", Toast.LENGTH_LONG).show();
                         Log.e("Viafirma", "CA no soportada");
                     } else if (message.equalsIgnoreCase(ViafirmaAndroidLib.ERROR_EXPIRED_CERTIFICATE)) {
-                        Toast.makeText(CONTEXTO,"Certificado Expirado",Toast.LENGTH_LONG).show();
+                        Toast.makeText(CONTEXTO, "Certificado Expirado", Toast.LENGTH_LONG).show();
                         Log.e("Viafirma", "Certificado Expirado");
                     } else if (message.equalsIgnoreCase(ViafirmaAndroidLib.ERROR_VIAFIRMA_CONNECTION)) {
-                        Toast.makeText(CONTEXTO,"Error en la conexión",Toast.LENGTH_LONG).show();
+                        Toast.makeText(CONTEXTO, "Error en la conexión", Toast.LENGTH_LONG).show();
                         Log.e("Viafirma", "Error en la conexión");
                     } else if (message.equalsIgnoreCase(ViafirmaAndroidLib.ERROR_WITH_CERTIFICATE)) {
-                        Toast.makeText(CONTEXTO,"Error al leer el certificado",Toast.LENGTH_LONG).show();
+                        Toast.makeText(CONTEXTO, "Error al leer el certificado", Toast.LENGTH_LONG).show();
                         Log.e("Viafirma", "Error al leer el certificado");
                     } else {
-                        Toast.makeText(CONTEXTO,"La contraseña no es correcta",Toast.LENGTH_LONG).show();
+                        Toast.makeText(CONTEXTO, "La contraseña no es correcta", Toast.LENGTH_LONG).show();
                         Log.e("Viafirma", "La contraseña no es correcta");
                     }
                 }
@@ -103,10 +107,11 @@ public class MainActivity extends Activity implements Selector.SelectorListener{
 
     public void firmar(String tipoDeFirma) {
 
+        progressBar = ProgressDialog.show(CONTEXTO, "Realizando Firma", "Por favor espere ...");
+
         this.url = ((EditText) findViewById(R.id.url)).getText().toString();
         this.key = ((EditText) findViewById(R.id.appKey)).getText().toString();
         this.pass = ((EditText) findViewById(R.id.passKey)).getText().toString();
-
 
         List<DocumentVO> listaDocumentos = new ArrayList<>();
         byte[] dataToSign;
@@ -130,10 +135,10 @@ public class MainActivity extends Activity implements Selector.SelectorListener{
 
         if (api.isKeyChainSupported()) {
             CertificateEntity certificado = api.getCertificateKeyChainRef();
-
             api.sign(listaDocumentos, certificado, "12345", policyParams, new ViafirmaAPILoginCallBack() {
                 @Override
                 public void signOk(CertificateEntity cert, final String idSign) {
+                    progressBar.dismiss();
                     final String idFirma = idSign;
                     Log.i("Viafirma", "Se ha realizado la firma con el siguiente id: " + idSign);
 
@@ -157,9 +162,9 @@ public class MainActivity extends Activity implements Selector.SelectorListener{
 
                 @Override
                 public void fail(String message) {
+                    progressBar.dismiss();
                     final String mensaje = message;
                     Log.e("Viafirma", "Se ha producido un error: " + message);
-
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
