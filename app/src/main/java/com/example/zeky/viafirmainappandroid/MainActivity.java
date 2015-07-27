@@ -38,7 +38,6 @@ public class MainActivity extends Activity implements Selector.SelectorListener{
     private String url;
     private String key;
     private String pass;
-    private ProgressDialog progressBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -107,7 +106,9 @@ public class MainActivity extends Activity implements Selector.SelectorListener{
 
     public void firmar(String tipoDeFirma) {
 
-        progressBar = ProgressDialog.show(CONTEXTO, "Realizando Firma", "Por favor espere ...");
+        FragmentManager fm = getFragmentManager();
+        final ProgressDialogFragment progressDialogFragment = ProgressDialogFragment.newInstance();
+        progressDialogFragment.show(fm,"progressDialog");
 
         this.url = ((EditText) findViewById(R.id.url)).getText().toString();
         this.key = ((EditText) findViewById(R.id.appKey)).getText().toString();
@@ -120,7 +121,7 @@ public class MainActivity extends Activity implements Selector.SelectorListener{
 
             dataToSign = IOUtils.toByteArray(getResources().openRawResource(R.raw.viafirmasdkinappandroiddoc));
 
-            DocumentVO documento = new DocumentVO("DocumentSigned", dataToSign, TypeFile.PDF);
+            DocumentVO documento = new DocumentVO("DocumentSigned.pdf", dataToSign, TypeFile.PDF);
             documento.setTypeFormatSign(TypeFormatSign.valueOf(tipoDeFirma));
             listaDocumentos.add(documento);
 
@@ -138,7 +139,8 @@ public class MainActivity extends Activity implements Selector.SelectorListener{
             api.sign(listaDocumentos, certificado, "12345", policyParams, new ViafirmaAPILoginCallBack() {
                 @Override
                 public void signOk(CertificateEntity cert, final String idSign) {
-                    progressBar.dismiss();
+                    progressDialogFragment.dismiss();
+
                     final String idFirma = idSign;
                     Log.i("Viafirma", "Se ha realizado la firma con el siguiente id: " + idSign);
 
@@ -162,7 +164,7 @@ public class MainActivity extends Activity implements Selector.SelectorListener{
 
                 @Override
                 public void fail(String message) {
-                    progressBar.dismiss();
+                    progressDialogFragment.dismiss();
                     final String mensaje = message;
                     Log.e("Viafirma", "Se ha producido un error: " + message);
                     runOnUiThread(new Runnable() {
