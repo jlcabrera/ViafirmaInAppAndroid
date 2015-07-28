@@ -11,7 +11,7 @@
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text= "@string/aceptar"
+        android:text= "@string/autenticar"
         android:id="@+id/button"
         android:onClick="authenticate"
         android:layout_alignParentBottom="true"
