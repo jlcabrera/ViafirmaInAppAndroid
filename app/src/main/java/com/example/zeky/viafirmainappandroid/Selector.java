@@ -73,7 +73,7 @@ public class Selector extends DialogFragment implements TextView.OnEditorActionL
         AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(getActivity());
         alertDialogBuilder.setTitle("Seleccione firma")
                 .setView(view)
-                .setPositiveButton("aceptar", new DialogInterface.OnClickListener() {
+                .setPositiveButton(R.string.aceptar, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         SelectorListener activity = (SelectorListener)getActivity();

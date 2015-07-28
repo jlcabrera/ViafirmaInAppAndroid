@@ -2,6 +2,7 @@ package com.example.zeky.viafirmainappandroid;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Application;
 import android.app.FragmentManager;
 import android.app.ProgressDialog;
 import android.content.Context;
@@ -17,10 +18,19 @@ import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
+import com.google.gson.Gson;
+
 import org.apache.commons.io.IOUtils;
 import org.viafirma.client.sign.TypeFile;
 import org.viafirma.client.sign.TypeFormatSign;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -35,15 +45,45 @@ import viafirma.mobile.vo.DocumentVO;
 public class MainActivity extends Activity implements Selector.SelectorListener{
 
     private final Context CONTEXTO = this;
-    private String url;
-    private String key;
-    private String pass;
+    private EditText editUrl;
+    private EditText editKey;
+    private EditText editPass;
+    private Credenciales credenciales;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        editUrl = (EditText) findViewById(R.id.url);
+        editKey = (EditText) findViewById(R.id.appKey);
+        editPass = (EditText) findViewById(R.id.passKey);
+
+        BufferedReader config = null;
+        File fileConfig = new File(getFilesDir().getPath() + "/configuration/data.json");
+        if(fileConfig.exists()) {
+            try {
+                config = new BufferedReader(new FileReader(fileConfig));
+                Gson gson = new Gson();
+                this.credenciales = gson.fromJson(config, Credenciales.class);
+            } catch (FileNotFoundException e) {
+                Log.e("FileNotFoundException", "Han ocurrido errores al leer el json");
+            }finally{
+                if(config != null){
+                    try {
+                        config.close();
+                    } catch (IOException e) {
+                        Log.e("Cerrar Stream", "Se ha producido un error al cerrar el stream");
+                    }
+                }
+            }
+        }else{
+            this.credenciales = new Credenciales();
+        }
+
+        this.editUrl.setText(credenciales.getUrl());
+        this.editKey.setText(credenciales.getKey());
+        this.editPass.setText(credenciales.getPass());
     }
 
     @Override
@@ -61,10 +101,10 @@ public class MainActivity extends Activity implements Selector.SelectorListener{
         return super.onOptionsItemSelected(item);
     }
 
-    public void autenticar(View view) {
-        this.url = ((EditText) findViewById(R.id.url)).getText().toString();
-        this.key = ((EditText) findViewById(R.id.appKey)).getText().toString();
-        this.pass = ((EditText) findViewById(R.id.passKey)).getText().toString();
+    public void authenticate(View view) {
+        String url = editUrl.getText().toString();
+        String key = editKey.getText().toString();
+        String pass = editPass.getText().toString();
 
         ViafirmaAndroidLib api = ViafirmaAndroidLib.initWithOptions(this, null, url, key, pass);
 
@@ -74,7 +114,7 @@ public class MainActivity extends Activity implements Selector.SelectorListener{
             api.login(certificado, "julio", new ViafirmaAPILoginCallBack() {
                 @Override
                 public void loginOk(CertificateEntity entity) {
-                    AlertDialog dialogo = new AlertDialog.Builder(CONTEXTO).setTitle("Autentición correcta")
+                    AlertDialog dialogo = new AlertDialog.Builder(CONTEXTO).setTitle(R.string.autenticacionCorrecta)
                             .setMessage(entity.getCertificateFullName() + " - " + entity.getCertificateNationalId()).create();
                     dialogo.show();
                 }
@@ -82,20 +122,16 @@ public class MainActivity extends Activity implements Selector.SelectorListener{
                 @Override
                 public void fail(String message) {
                     if (message.equalsIgnoreCase(ViafirmaAndroidLib.ERROR_CA_NOT_SUPPORTED)) {
-                        Toast.makeText(CONTEXTO, "CA no soportada", Toast.LENGTH_LONG).show();
-                        Log.e("Viafirma", "CA no soportada");
+                        Toast.makeText(CONTEXTO, R.string.CAnoSoportada, Toast.LENGTH_LONG).show();
+
                     } else if (message.equalsIgnoreCase(ViafirmaAndroidLib.ERROR_EXPIRED_CERTIFICATE)) {
-                        Toast.makeText(CONTEXTO, "Certificado Expirado", Toast.LENGTH_LONG).show();
-                        Log.e("Viafirma", "Certificado Expirado");
+                        Toast.makeText(CONTEXTO, R.string.certificadoExpirado, Toast.LENGTH_LONG).show();
                     } else if (message.equalsIgnoreCase(ViafirmaAndroidLib.ERROR_VIAFIRMA_CONNECTION)) {
-                        Toast.makeText(CONTEXTO, "Error en la conexión", Toast.LENGTH_LONG).show();
-                        Log.e("Viafirma", "Error en la conexión");
+                        Toast.makeText(CONTEXTO, R.string.ErrorEnLaConexcion, Toast.LENGTH_LONG).show();
                     } else if (message.equalsIgnoreCase(ViafirmaAndroidLib.ERROR_WITH_CERTIFICATE)) {
-                        Toast.makeText(CONTEXTO, "Error al leer el certificado", Toast.LENGTH_LONG).show();
-                        Log.e("Viafirma", "Error al leer el certificado");
+                        Toast.makeText(CONTEXTO, R.string.ErrorAlLeerCertificado, Toast.LENGTH_LONG).show();
                     } else {
-                        Toast.makeText(CONTEXTO, "La contraseña no es correcta", Toast.LENGTH_LONG).show();
-                        Log.e("Viafirma", "La contraseña no es correcta");
+                        Toast.makeText(CONTEXTO, R.string.passIncorrecta, Toast.LENGTH_LONG).show();
                     }
                 }
             });
@@ -104,15 +140,15 @@ public class MainActivity extends Activity implements Selector.SelectorListener{
 
     //----------------------------------------
 
-    public void firmar(String tipoDeFirma) {
+    public void sign(String tipoDeFirma) {
 
         FragmentManager fm = getFragmentManager();
         final ProgressDialogFragment progressDialogFragment = ProgressDialogFragment.newInstance();
         progressDialogFragment.show(fm,"progressDialog");
 
-        this.url = ((EditText) findViewById(R.id.url)).getText().toString();
-        this.key = ((EditText) findViewById(R.id.appKey)).getText().toString();
-        this.pass = ((EditText) findViewById(R.id.passKey)).getText().toString();
+        final  String url = editUrl.getText().toString();
+        String key = editKey.getText().toString();
+        String pass = editPass.getText().toString();
 
         List<DocumentVO> listaDocumentos = new ArrayList<>();
         byte[] dataToSign;
@@ -127,7 +163,7 @@ public class MainActivity extends Activity implements Selector.SelectorListener{
 
         } catch (Exception e) {
             e.printStackTrace();
-            Toast.makeText(CONTEXTO, "Han ocurrido errores", Toast.LENGTH_LONG).show();
+            Toast.makeText(CONTEXTO, R.string.hanOcurridoErrores, Toast.LENGTH_LONG).show();
         }
 
         ViafirmaAndroidLib api = ViafirmaAndroidLib.initWithOptions(this, null, url, key, pass);
@@ -147,9 +183,9 @@ public class MainActivity extends Activity implements Selector.SelectorListener{
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            AlertDialog dialog = new AlertDialog.Builder(CONTEXTO).setTitle("SE HA FIRMADO UN DOCUMENTO")
-                                    .setMessage("Id de firma: " + idFirma)
-                                    .setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
+                            AlertDialog dialog = new AlertDialog.Builder(CONTEXTO).setTitle(R.string.seHaFirmadoUnDocumento)
+                                    .setMessage(R.string.idsign + idFirma)
+                                    .setPositiveButton(R.string.aceptar, new DialogInterface.OnClickListener() {
                                         @Override
                                         public void onClick(DialogInterface dialog, int which) {
                                             Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(url + "/v/" + idSign + "?d"));
@@ -170,7 +206,7 @@ public class MainActivity extends Activity implements Selector.SelectorListener{
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            Toast.makeText(CONTEXTO, "Han ocurrido errores: " + mensaje, Toast.LENGTH_LONG).show();
+                            Toast.makeText(CONTEXTO, R.string.hanOcurridoErrores + mensaje, Toast.LENGTH_LONG).show();
                         }
                     });
                 }
@@ -180,7 +216,7 @@ public class MainActivity extends Activity implements Selector.SelectorListener{
 
     //-----------------------------------------------------
 
-    public void seleccionarTipoFirma(View vista) {
+    public void selectTypeSignature(View vista) {
         FragmentManager fm = getFragmentManager();
         Selector selector = new Selector();
         selector.show(fm,"test");
@@ -190,6 +226,36 @@ public class MainActivity extends Activity implements Selector.SelectorListener{
 
     @Override
     public void onFinishEditDialog(String typeFromat) {
-        firmar(typeFromat);
+        sign(typeFromat);
+    }
+
+
+    @Override
+    protected void onDestroy() {
+        this.credenciales.setUrl(this.editUrl.getText().toString());
+        this.credenciales.setKey(this.editKey.getText().toString());
+        this.credenciales.setPass(this.editPass.getText().toString());
+
+        Gson gson = new Gson();
+        File config = new File(getFilesDir().getPath() + "/configuration");
+        config.mkdir();
+        BufferedWriter bw = null;
+        try {
+            String data = gson.toJson(credenciales);
+            bw = new BufferedWriter(new FileWriter(new File(config, "data.json")));
+            bw.write(data);
+        } catch (IOException e) {
+            Log.e("error", "Error al escribir en el fichero de configuración");
+            e.printStackTrace();
+        }finally {
+            if(bw != null){
+                try {
+                    bw.close();
+                } catch (IOException e) {
+                    Log.e("Error", "Error al cerrar el stream para guardar los datos de las credenciales");
+                }
+            }
+        }
+        super.onDestroy();
     }
 }

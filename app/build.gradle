@@ -24,4 +24,5 @@ dependencies {
     compile files('libs/ViafirmaAndroidLib.jar')
     compile files('libs/bugsense-3.0.1.jar')
     compile 'org.apache.directory.studio:org.apache.commons.io:2.4'
+    compile 'com.google.code.gson:gson:2.3.1'
 }
