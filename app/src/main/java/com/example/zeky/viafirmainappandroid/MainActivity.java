@@ -8,6 +8,7 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
@@ -111,7 +112,7 @@ public class MainActivity extends Activity implements Selector.SelectorListener{
 
         if (api.isKeyChainSupported()) {
             CertificateEntity certificado = api.getCertificateKeyChainRef();
-            api.login(certificado, "julio", new ViafirmaAPILoginCallBack() {
+            api.login(certificado, null, new ViafirmaAPILoginCallBack() {
                 @Override
                 public void loginOk(CertificateEntity entity) {
                     AlertDialog dialogo = new AlertDialog.Builder(CONTEXTO).setTitle(R.string.autenticacionCorrecta)
@@ -142,10 +143,10 @@ public class MainActivity extends Activity implements Selector.SelectorListener{
 
     public void sign(String tipoDeFirma) {
 
+
         FragmentManager fm = getFragmentManager();
         final ProgressDialogFragment progressDialogFragment = ProgressDialogFragment.newInstance();
         progressDialogFragment.show(fm,"progressDialog");
-
         final  String url = editUrl.getText().toString();
         String key = editKey.getText().toString();
         String pass = editPass.getText().toString();
@@ -158,7 +159,10 @@ public class MainActivity extends Activity implements Selector.SelectorListener{
             dataToSign = IOUtils.toByteArray(getResources().openRawResource(R.raw.viafirmasdkinappandroiddoc));
 
             DocumentVO documento = new DocumentVO("DocumentSigned.pdf", dataToSign, TypeFile.PDF);
-            documento.setTypeFormatSign(TypeFormatSign.valueOf(tipoDeFirma));
+            //documento.setTypeFormatSign(TypeFormatSign.valueOf(tipoDeFirma));
+
+            documento.setTypeFormatSign(TypeFormatSign.DIGITALIZED_SIGN);
+
             listaDocumentos.add(documento);
 
         } catch (Exception e) {
